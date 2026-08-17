@@ -1,23 +1,5 @@
 "use client";
 
-import {
-    DndContext,
-    DragEndEvent,
-    PointerSensor,
-    closestCenter,
-    useSensor,
-    useSensors,
-} from "@dnd-kit/core";
-
-import {
-    SortableContext,
-    verticalListSortingStrategy,
-    useSortable,
-    arrayMove,
-} from "@dnd-kit/sortable";
-
-import { CSS } from "@dnd-kit/utilities";
-
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -25,6 +7,7 @@ interface Category {
     id: number;
     name: string;
     slug: string;
+    icon: string;
     sort_order: number;
     is_active: boolean;
 }
@@ -33,179 +16,262 @@ interface CategoryManagerProps {
     initialCategories: Category[];
 }
 
-interface SortableCategoryProps {
-    category: Category;
-    saving: boolean;
-    onEdit: (category: Category) => void;
-    onToggleActive: (category: Category) => void;
-    onDelete: (category: Category) => void;
-}
+const ICON_OPTIONS = [
+    {
+        value: "coffee",
+        label: "Kahve",
+    },
+    {
+        value: "breakfast",
+        label: "Kahvaltı",
+    },
+    {
+        value: "hot-drink",
+        label: "Sıcak İçecek",
+    },
+    {
+        value: "cold-drink",
+        label: "Soğuk İçecek",
+    },
+    {
+        value: "dessert",
+        label: "Tatlı",
+    },
+    {
+        value: "snack",
+        label: "Atıştırmalık",
+    },
+    {
+        value: "extra",
+        label: "Ekstra",
+    },
+    {
+        value: "food",
+        label: "Yiyecek",
+    },
+];
 
-function SortableCategory({
-    category,
-    saving,
-    onEdit,
-    onToggleActive,
-    onDelete,
-}: SortableCategoryProps) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({
-        id: category.id,
-    });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 20 : undefined,
-        opacity: isDragging ? 0.65 : 1,
-    };
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className="flex flex-col gap-4 bg-white p-5 sm:flex-row sm:items-center sm:justify-between"
-        >
-            {/* ========================= */}
-            {/* CATEGORY INFO */}
-            {/* ========================= */}
-
-            <div className="flex min-w-0 items-start gap-3">
-
-                {/* DRAG HANDLE */}
-
-                <button
-                    type="button"
-                    {...attributes}
-                    {...listeners}
-                    aria-label={`${category.name} kategorisini taşı`}
-                    className="mt-0.5 cursor-grab touch-none rounded-lg border border-[#e3dbd2] px-2.5 py-2 text-[#81766e] active:cursor-grabbing"
+function CategoryIcon({
+    icon,
+    className = "h-5 w-5",
+}: {
+    icon: string;
+    className?: string;
+}) {
+    switch (icon) {
+        case "breakfast":
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className={className}
                 >
-                    ⋮⋮
-                </button>
+                    <path
+                        d="M4 19h16"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M5 15h14"
+                        strokeLinecap="round"
+                    />
+                    <path d="M7 15V8h10v7" />
+                    <path
+                        d="M9 8V5"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M15 8V5"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            );
 
-                <div className="min-w-0">
-
-                    <div className="flex flex-wrap items-center gap-2">
-
-                        <h3 className="font-semibold">
-                            {category.name}
-                        </h3>
-
-                        <span
-                            className={`rounded-full px-2.5 py-1 text-xs ${category.is_active
-                                    ? "bg-green-50 text-green-600"
-                                    : "bg-gray-100 text-gray-500"
-                                }`}
-                        >
-                            {category.is_active
-                                ? "Aktif"
-                                : "Pasif"}
-                        </span>
-
-                    </div>
-
-                    <p className="mt-1 break-words text-sm text-[#81766e]">
-                        /{category.slug}
-                    </p>
-
-                </div>
-            </div>
-
-            {/* ========================= */}
-            {/* ACTIONS */}
-            {/* ========================= */}
-
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-
-                <button
-                    type="button"
-                    onClick={() =>
-                        onToggleActive(category)
-                    }
-                    disabled={saving}
-                    className="rounded-lg border border-[#ddd4cb] px-3 py-2 text-sm transition hover:bg-[#f4f0ea] disabled:opacity-50"
+        case "hot-drink":
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className={className}
                 >
-                    {category.is_active
-                        ? "Pasif hale getir"
-                        : "Aktif hale getir"}
-                </button>
+                    <path d="M5 8h11v7a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8Z" />
+                    <path
+                        d="M16 10h2a2.5 2.5 0 0 1 0 5h-2"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M8 4c0 1 1 1.2 1 2.2"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M12 4c0 1 1 1.2 1 2.2"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            );
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        onEdit(category)
-                    }
-                    disabled={saving}
-                    className="rounded-lg border border-[#ddd4cb] px-3 py-2 text-sm transition hover:bg-[#f4f0ea] disabled:opacity-50"
+        case "cold-drink":
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className={className}
                 >
-                    Düzenle
-                </button>
+                    <path d="M6 5h12l-1 15H7L6 5Z" />
+                    <path
+                        d="M9 2h6"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M15 5l2-3"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M10 9h4"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            );
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        onDelete(category)
-                    }
-                    disabled={saving}
-                    className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+        case "dessert":
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className={className}
                 >
-                    Sil
-                </button>
+                    <path d="M4 18h16" strokeLinecap="round" />
+                    <path d="M6 18l2-9h8l2 9" />
+                    <path d="M7 9h10" />
+                    <path
+                        d="M9 6c1-2 5-2 6 0"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            );
 
-            </div>
-        </div>
-    );
+        case "snack":
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className={className}
+                >
+                    <path
+                        d="M5 13h14"
+                        strokeLinecap="round"
+                    />
+                    <path d="M6 13a6 6 0 0 1 12 0" />
+                    <path
+                        d="M8 17h8"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M9 13v2M12 13v2M15 13v2"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            );
+
+        case "extra":
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className={className}
+                >
+                    <circle cx="12" cy="12" r="8" />
+                    <path
+                        d="M12 8v8M8 12h8"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            );
+
+        case "food":
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className={className}
+                >
+                    <path
+                        d="M4 15h16"
+                        strokeLinecap="round"
+                    />
+                    <path d="M6 15a6 6 0 0 1 12 0" />
+                    <path
+                        d="M8 18h8"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            );
+
+        case "coffee":
+        default:
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className={className}
+                >
+                    <path d="M5 8h11v7a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8Z" />
+                    <path
+                        d="M16 10h2a2.5 2.5 0 0 1 0 5h-2"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M7 4c0 1 1 1.2 1 2.2"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M11 4c0 1 1 1.2 1 2.2"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            );
+    }
 }
 
 export default function CategoryManager({
     initialCategories,
 }: CategoryManagerProps) {
-
     const [categories, setCategories] =
-        useState<Category[]>(
-            [...initialCategories].sort(
-                (a, b) =>
-                    a.sort_order -
-                    b.sort_order
-            )
-        );
+        useState<Category[]>(initialCategories);
 
-    const [adding, setAdding] =
-        useState(false);
+    const [adding, setAdding] = useState(false);
 
     const [editingCategory, setEditingCategory] =
         useState<Category | null>(null);
 
-    const [name, setName] =
-        useState("");
+    const [name, setName] = useState("");
+    const [slug, setSlug] = useState("");
+    const [icon, setIcon] = useState("coffee");
 
-    const [slug, setSlug] =
-        useState("");
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
 
-    const [saving, setSaving] =
-        useState(false);
+    const [draggedCategoryId, setDraggedCategoryId] =
+        useState<number | null>(null);
 
-    const [error, setError] =
-        useState("");
-
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8,
-            },
-        })
-    );
-
-    // =========================
+    // =====================================================
     // SLUG
-    // =========================
+    // =====================================================
 
     function createSlug(value: string) {
         return value
@@ -221,116 +287,14 @@ export default function CategoryManager({
             .replace(/^-+|-+$/g, "");
     }
 
-    // =========================
-    // DRAG CATEGORY
-    // =========================
-
-    async function handleDragEnd(
-        event: DragEndEvent
-    ) {
-        const {
-            active,
-            over,
-        } = event;
-
-        if (!over) return;
-
-        if (
-            active.id === over.id
-        ) {
-            return;
-        }
-
-        const oldIndex =
-            categories.findIndex(
-                (category) =>
-                    category.id ===
-                    active.id
-            );
-
-        const newIndex =
-            categories.findIndex(
-                (category) =>
-                    category.id ===
-                    over.id
-            );
-
-        if (
-            oldIndex === -1 ||
-            newIndex === -1
-        ) {
-            return;
-        }
-
-        const newCategories =
-            arrayMove(
-                categories,
-                oldIndex,
-                newIndex
-            );
-
-        setCategories(
-            newCategories.map(
-                (category, index) => ({
-                    ...category,
-                    sort_order:
-                        index + 1,
-                })
-            )
-        );
-
-        const supabase =
-            createClient();
-
-        setSaving(true);
-
-        const updates =
-            newCategories.map(
-                (category, index) =>
-                    supabase
-                        .from("categories")
-                        .update({
-                            sort_order:
-                                index + 1,
-                        })
-                        .eq(
-                            "id",
-                            category.id
-                        )
-            );
-
-        const results =
-            await Promise.all(
-                updates
-            );
-
-        const failed =
-            results.find(
-                (result) =>
-                    result.error
-            );
-
-        if (failed?.error) {
-            console.error(
-                "CATEGORY SORT ERROR:",
-                failed.error
-            );
-
-            setError(
-                `Kategori sırası kaydedilemedi: ${failed.error.message}`
-            );
-        }
-
-        setSaving(false);
-    }
-
-    // =========================
+    // =====================================================
     // ADD
-    // =========================
+    // =====================================================
 
     function openAdd() {
         setName("");
         setSlug("");
+        setIcon("coffee");
         setError("");
         setAdding(true);
     }
@@ -344,16 +308,13 @@ export default function CategoryManager({
 
     async function handleAdd() {
         if (!name.trim()) {
-            setError(
-                "Kategori adı boş bırakılamaz."
-            );
+            setError("Kategori adı boş bırakılamaz.");
             return;
         }
 
-        const finalSlug =
-            slug.trim()
-                ? createSlug(slug)
-                : createSlug(name);
+        const finalSlug = slug.trim()
+            ? createSlug(slug)
+            : createSlug(name);
 
         if (!finalSlug) {
             setError(
@@ -365,56 +326,67 @@ export default function CategoryManager({
         setSaving(true);
         setError("");
 
-        const supabase =
-            createClient();
+        const supabase = createClient();
 
         const nextSortOrder =
-            categories.length + 1;
+            categories.length > 0
+                ? Math.max(
+                    ...categories.map(
+                        (category) =>
+                            category.sort_order
+                    )
+                ) + 1
+                : 1;
 
-        const {
-            data,
-            error,
-        } = await supabase
+        const { data, error } = await supabase
             .from("categories")
             .insert({
                 name: name.trim(),
                 slug: finalSlug,
-                sort_order:
-                    nextSortOrder,
+                icon,
+                sort_order: nextSortOrder,
                 is_active: true,
             })
             .select()
             .single();
 
         if (error) {
+            console.error(
+                "CATEGORY INSERT ERROR:",
+                error
+            );
+
             setError(
                 `Kategori eklenemedi: ${error.message}`
             );
+
             setSaving(false);
             return;
         }
 
-        setCategories(
-            (current) => [
-                ...current,
-                data,
-            ]
-        );
+        setCategories((currentCategories) => [
+            ...currentCategories,
+            data,
+        ]);
 
+        setName("");
+        setSlug("");
+        setIcon("coffee");
         setSaving(false);
         setAdding(false);
     }
 
-    // =========================
+    // =====================================================
     // EDIT
-    // =========================
+    // =====================================================
 
-    function openEdit(
-        category: Category
-    ) {
+    function openEdit(category: Category) {
         setEditingCategory(category);
+
         setName(category.name);
         setSlug(category.slug);
+        setIcon(category.icon || "coffee");
+
         setError("");
     }
 
@@ -429,20 +401,17 @@ export default function CategoryManager({
         if (!editingCategory) return;
 
         if (!name.trim()) {
-            setError(
-                "Kategori adı boş bırakılamaz."
-            );
+            setError("Kategori adı boş bırakılamaz.");
             return;
         }
 
-        const finalSlug =
-            slug.trim()
-                ? createSlug(slug)
-                : createSlug(name);
+        const finalSlug = slug.trim()
+            ? createSlug(slug)
+            : createSlug(name);
 
         if (!finalSlug) {
             setError(
-                "Geçerli bir slug girin."
+                "Geçerli bir kategori slug değeri girin."
             );
             return;
         }
@@ -450,51 +419,48 @@ export default function CategoryManager({
         setSaving(true);
         setError("");
 
-        const supabase =
-            createClient();
+        const supabase = createClient();
 
-        const {
-            data,
-            error,
-        } = await supabase
+        const { data, error } = await supabase
             .from("categories")
             .update({
                 name: name.trim(),
                 slug: finalSlug,
+                icon,
             })
-            .eq(
-                "id",
-                editingCategory.id
-            )
+            .eq("id", editingCategory.id)
             .select()
             .single();
 
         if (error) {
+            console.error(
+                "CATEGORY UPDATE ERROR:",
+                error
+            );
+
             setError(
                 `Kategori güncellenemedi: ${error.message}`
             );
+
             setSaving(false);
             return;
         }
 
-        setCategories(
-            (current) =>
-                current.map(
-                    (category) =>
-                        category.id ===
-                            editingCategory.id
-                            ? data
-                            : category
-                )
+        setCategories((currentCategories) =>
+            currentCategories.map((category) =>
+                category.id === editingCategory.id
+                    ? data
+                    : category
+            )
         );
 
         setSaving(false);
         setEditingCategory(null);
     }
 
-    // =========================
+    // =====================================================
     // ACTIVE / PASSIVE
-    // =========================
+    // =====================================================
 
     async function handleToggleActive(
         category: Category
@@ -502,127 +468,256 @@ export default function CategoryManager({
         setSaving(true);
         setError("");
 
-        const supabase =
-            createClient();
+        const supabase = createClient();
 
-        const {
-            data,
-            error,
-        } = await supabase
+        const { data, error } = await supabase
             .from("categories")
             .update({
-                is_active:
-                    !category.is_active,
+                is_active: !category.is_active,
             })
-            .eq(
-                "id",
-                category.id
-            )
+            .eq("id", category.id)
             .select()
             .single();
 
         if (error) {
+            console.error(
+                "CATEGORY ACTIVE UPDATE ERROR:",
+                error
+            );
+
             setError(
                 `Kategori durumu değiştirilemedi: ${error.message}`
             );
+
             setSaving(false);
             return;
         }
 
-        setCategories(
-            (current) =>
-                current.map(
-                    (item) =>
-                        item.id ===
-                            category.id
-                            ? data
-                            : item
-                )
+        setCategories((currentCategories) =>
+            currentCategories.map((currentCategory) =>
+                currentCategory.id === category.id
+                    ? data
+                    : currentCategory
+            )
         );
 
         setSaving(false);
     }
 
-    // =========================
+    // =====================================================
     // DELETE
-    // =========================
+    // =====================================================
 
-    async function handleDelete(
-        category: Category
-    ) {
-        const confirmed =
-            window.confirm(
-                `"${category.name}" kategorisini silmek istediğinize emin misiniz?`
-            );
+    async function handleDelete(category: Category) {
+        const confirmed = window.confirm(
+            `"${category.name}" kategorisini silmek istediğinize emin misiniz?`
+        );
 
-        if (!confirmed) return;
+        if (!confirmed) {
+            return;
+        }
 
         setSaving(true);
         setError("");
 
-        const supabase =
-            createClient();
+        const supabase = createClient();
 
-        const {
-            error,
-        } = await supabase
+        const { error } = await supabase
             .from("categories")
             .delete()
-            .eq(
-                "id",
-                category.id
-            );
+            .eq("id", category.id);
 
         if (error) {
+            console.error(
+                "CATEGORY DELETE ERROR:",
+                error
+            );
+
             setError(
                 `Kategori silinemedi: ${error.message}`
             );
+
             setSaving(false);
             return;
         }
 
-        setCategories(
-            (current) =>
-                current
-                    .filter(
-                        (item) =>
-                            item.id !==
-                            category.id
-                    )
-                    .map(
-                        (
-                            item,
-                            index
-                        ) => ({
-                            ...item,
+        const remainingCategories =
+            categories.filter(
+                (currentCategory) =>
+                    currentCategory.id !== category.id
+            );
+
+        const normalizedCategories =
+            remainingCategories.map(
+                (currentCategory, index) => ({
+                    ...currentCategory,
+                    sort_order: index + 1,
+                })
+            );
+
+        setCategories(normalizedCategories);
+
+        // Sıralamaları tekrar düzenle
+        const updates =
+            normalizedCategories.map(
+                (currentCategory) =>
+                    supabase
+                        .from("categories")
+                        .update({
                             sort_order:
-                                index + 1,
+                                currentCategory.sort_order,
                         })
-                    )
-        );
+                        .eq(
+                            "id",
+                            currentCategory.id
+                        )
+            );
+
+        await Promise.all(updates);
 
         setSaving(false);
     }
 
-    // =========================
-    // RENDER
-    // =========================
+    // =====================================================
+    // DRAG & DROP
+    // =====================================================
+
+    function handleDragStart(
+        categoryId: number
+    ) {
+        setDraggedCategoryId(categoryId);
+    }
+
+    function handleDragOver(
+        event: React.DragEvent<HTMLDivElement>,
+        targetCategoryId: number
+    ) {
+        event.preventDefault();
+
+        if (
+            draggedCategoryId === null ||
+            draggedCategoryId === targetCategoryId
+        ) {
+            return;
+        }
+
+        setCategories((currentCategories) => {
+            const draggedIndex =
+                currentCategories.findIndex(
+                    (category) =>
+                        category.id ===
+                        draggedCategoryId
+                );
+
+            const targetIndex =
+                currentCategories.findIndex(
+                    (category) =>
+                        category.id ===
+                        targetCategoryId
+                );
+
+            if (
+                draggedIndex === -1 ||
+                targetIndex === -1
+            ) {
+                return currentCategories;
+            }
+
+            const updatedCategories = [
+                ...currentCategories,
+            ];
+
+            const [draggedCategory] =
+                updatedCategories.splice(
+                    draggedIndex,
+                    1
+                );
+
+            updatedCategories.splice(
+                targetIndex,
+                0,
+                draggedCategory
+            );
+
+            return updatedCategories;
+        });
+    }
+
+    async function handleDragEnd() {
+        if (draggedCategoryId === null) {
+            return;
+        }
+
+        setDraggedCategoryId(null);
+        setSaving(true);
+        setError("");
+
+        const supabase = createClient();
+
+        const currentCategories =
+            [...categories];
+
+        const normalizedCategories =
+            currentCategories.map(
+                (category, index) => ({
+                    ...category,
+                    sort_order: index + 1,
+                })
+            );
+
+        setCategories(normalizedCategories);
+
+        const results =
+            await Promise.all(
+                normalizedCategories.map(
+                    (category) =>
+                        supabase
+                            .from("categories")
+                            .update({
+                                sort_order:
+                                    category.sort_order,
+                            })
+                            .eq(
+                                "id",
+                                category.id
+                            )
+                )
+            );
+
+        const failedUpdate =
+            results.find(
+                (result) => result.error
+            );
+
+        if (failedUpdate?.error) {
+            console.error(
+                "CATEGORY SORT ERROR:",
+                failedUpdate.error
+            );
+
+            setError(
+                `Kategori sırası kaydedilemedi: ${failedUpdate.error.message}`
+            );
+        }
+
+        setSaving(false);
+    }
 
     return (
         <>
-
+            {/* ================================================= */}
             {/* HEADER */}
+            {/* ================================================= */}
 
             <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
                 <div>
                     <h2 className="text-xl font-semibold">
                         Kategoriler
                     </h2>
 
                     <p className="mt-1 text-sm text-[#81766e]">
-                        Kategorileri basılı tutup
-                        sürükleyerek sıralayın.
+                        Menü kategorilerini yönetin ve
+                        sıralayın.
                     </p>
                 </div>
 
@@ -633,8 +728,11 @@ export default function CategoryManager({
                 >
                     + Kategori Ekle
                 </button>
-
             </div>
+
+            {/* ================================================= */}
+            {/* ERROR */}
+            {/* ================================================= */}
 
             {error &&
                 !adding &&
@@ -644,84 +742,191 @@ export default function CategoryManager({
                     </div>
                 )}
 
+            {/* ================================================= */}
             {/* CATEGORY LIST */}
+            {/* ================================================= */}
 
-            <DndContext
-                sensors={sensors}
-                collisionDetection={
-                    closestCenter
-                }
-                onDragEnd={
-                    handleDragEnd
-                }
-            >
-                <SortableContext
-                    items={categories.map(
-                        (category) =>
-                            category.id
-                    )}
-                    strategy={
-                        verticalListSortingStrategy
-                    }
-                >
-                    <div className="overflow-hidden rounded-2xl border border-[#e3dbd2] bg-white shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[#e3dbd2] bg-white shadow-sm">
+                {categories.length > 0 ? (
+                    <div className="divide-y divide-[#eee7df]">
+                        {categories.map(
+                            (
+                                category,
+                                index
+                            ) => (
+                                <div
+                                    key={
+                                        category.id
+                                    }
+                                    draggable={
+                                        !saving
+                                    }
+                                    onDragStart={() =>
+                                        handleDragStart(
+                                            category.id
+                                        )
+                                    }
+                                    onDragOver={(
+                                        event
+                                    ) =>
+                                        handleDragOver(
+                                            event,
+                                            category.id
+                                        )
+                                    }
+                                    onDragEnd={
+                                        handleDragEnd
+                                    }
+                                    className={`
+                                        flex
+                                        cursor-grab
+                                        flex-col
+                                        gap-4
+                                        p-5
+                                        transition
+                                        active:cursor-grabbing
+                                        sm:flex-row
+                                        sm:items-center
+                                        sm:justify-between
+                                        ${draggedCategoryId ===
+                                            category.id
+                                            ? "bg-[#f4f0ea] opacity-60"
+                                            : "hover:bg-[#fcfaf8]"
+                                        }
+                                    `}
+                                >
+                                    {/* LEFT */}
+                                    <div className="flex min-w-0 items-center gap-4">
+                                        {/* Order */}
 
-                        {categories.length >
-                            0 ? (
-                            <div className="divide-y divide-[#eee7df]">
-                                {categories.map(
-                                    (
-                                        category
-                                    ) => (
-                                        <SortableCategory
-                                            key={
-                                                category.id
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f4f0ea] text-xs font-semibold text-[#81766e]">
+                                            {index +
+                                                1}
+                                        </div>
+
+                                        {/* Icon */}
+
+                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#e3dbd2] bg-[#f8f5f1] text-[#5f5750]">
+                                            <CategoryIcon
+                                                icon={
+                                                    category.icon
+                                                }
+                                                className="h-5 w-5"
+                                            />
+                                        </div>
+
+                                        {/* Info */}
+
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <h3 className="font-semibold">
+                                                    {
+                                                        category.name
+                                                    }
+                                                </h3>
+
+                                                <span
+                                                    className={`rounded-full px-2.5 py-1 text-xs ${category.is_active
+                                                            ? "bg-green-50 text-green-600"
+                                                            : "bg-gray-100 text-gray-500"
+                                                        }`}
+                                                >
+                                                    {category.is_active
+                                                        ? "Aktif"
+                                                        : "Pasif"}
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-1 break-words text-sm text-[#81766e]">
+                                                /
+                                                {
+                                                    category.slug
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* BUTTONS */}
+
+                                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleToggleActive(
+                                                    category
+                                                )
                                             }
-                                            category={
-                                                category
-                                            }
-                                            saving={
+                                            disabled={
                                                 saving
                                             }
-                                            onEdit={
-                                                openEdit
+                                            className="rounded-lg border border-[#ddd4cb] px-3 py-2 text-sm transition hover:bg-[#f4f0ea] disabled:opacity-50"
+                                        >
+                                            {category.is_active
+                                                ? "Pasif hale getir"
+                                                : "Aktif hale getir"}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                openEdit(
+                                                    category
+                                                )
                                             }
-                                            onToggleActive={
-                                                handleToggleActive
+                                            disabled={
+                                                saving
                                             }
-                                            onDelete={
-                                                handleDelete
+                                            className="rounded-lg border border-[#ddd4cb] px-3 py-2 text-sm transition hover:bg-[#f4f0ea] disabled:opacity-50"
+                                        >
+                                            Düzenle
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleDelete(
+                                                    category
+                                                )
                                             }
-                                        />
-                                    )
-                                )}
-                            </div>
-                        ) : (
-                            <div className="p-8 text-center text-sm text-[#81766e]">
-                                Henüz kategori bulunmuyor.
-                            </div>
+                                            disabled={
+                                                saving
+                                            }
+                                            className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                                        >
+                                            Sil
+                                        </button>
+                                    </div>
+                                </div>
+                            )
                         )}
-
                     </div>
-                </SortableContext>
-            </DndContext>
+                ) : (
+                    <div className="p-8 text-center text-sm text-[#81766e]">
+                        Henüz kategori bulunmuyor.
+                    </div>
+                )}
+            </div>
 
+            {/* ================================================= */}
             {/* ADD MODAL */}
+            {/* ================================================= */}
 
             {adding && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5">
-
                     <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
+                        <div className="mb-6">
+                            <h2 className="text-xl font-semibold">
+                                Yeni Kategori Ekle
+                            </h2>
 
-                        <h2 className="text-xl font-semibold">
-                            Yeni Kategori Ekle
-                        </h2>
+                            <p className="mt-1 text-sm text-[#81766e]">
+                                Menüye yeni bir kategori
+                                ekleyin.
+                            </p>
+                        </div>
 
-                        <p className="mt-1 text-sm text-[#81766e]">
-                            Menüye yeni kategori ekleyin.
-                        </p>
-
-                        <div className="mt-6 space-y-5">
+                        <div className="space-y-5">
+                            {/* NAME */}
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium">
@@ -730,24 +935,36 @@ export default function CategoryManager({
 
                                 <input
                                     type="text"
-                                    value={name}
-                                    onChange={(e) => {
+                                    value={
+                                        name
+                                    }
+                                    onChange={(
+                                        event
+                                    ) => {
                                         setName(
-                                            e.target.value
+                                            event
+                                                .target
+                                                .value
                                         );
 
-                                        if (!slug) {
+                                        if (
+                                            !slug
+                                        ) {
                                             setSlug(
                                                 createSlug(
-                                                    e.target.value
+                                                    event
+                                                        .target
+                                                        .value
                                                 )
                                             );
                                         }
                                     }}
                                     placeholder="Örn. Kahveler"
-                                    className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm outline-none focus:border-[#292622]"
+                                    className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm text-[#292622] outline-none focus:border-[#292622]"
                                 />
                             </div>
+
+                            {/* SLUG */}
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium">
@@ -756,17 +973,67 @@ export default function CategoryManager({
 
                                 <input
                                     type="text"
-                                    value={slug}
-                                    onChange={(e) =>
+                                    value={
+                                        slug
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
                                         setSlug(
                                             createSlug(
-                                                e.target.value
+                                                event
+                                                    .target
+                                                    .value
                                             )
                                         )
                                     }
                                     placeholder="kahveler"
-                                    className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm outline-none focus:border-[#292622]"
+                                    className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm text-[#292622] outline-none focus:border-[#292622]"
                                 />
+                            </div>
+
+                            {/* ICON */}
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium">
+                                    Kategori ikonu
+                                </label>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    {ICON_OPTIONS.map(
+                                        (
+                                            option
+                                        ) => (
+                                            <button
+                                                key={
+                                                    option.value
+                                                }
+                                                type="button"
+                                                onClick={() =>
+                                                    setIcon(
+                                                        option.value
+                                                    )
+                                                }
+                                                className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm transition ${icon ===
+                                                        option.value
+                                                        ? "border-[#292622] bg-[#f4f0ea] text-[#292622]"
+                                                        : "border-[#ddd4cb] hover:bg-[#f8f5f1]"
+                                                    }`}
+                                            >
+                                                <CategoryIcon
+                                                    icon={
+                                                        option.value
+                                                    }
+                                                    className="h-5 w-5"
+                                                />
+
+                                                {
+                                                    option.label
+                                                }
+                                            </button>
+                                        )
+                                    )}
+                                </div>
                             </div>
 
                             {error && (
@@ -774,53 +1041,61 @@ export default function CategoryManager({
                                     {error}
                                 </div>
                             )}
-
                         </div>
 
                         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-
                             <button
                                 type="button"
-                                onClick={closeAdd}
-                                disabled={saving}
-                                className="flex-1 rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm font-medium hover:bg-[#f4f0ea]"
+                                onClick={
+                                    closeAdd
+                                }
+                                disabled={
+                                    saving
+                                }
+                                className="flex-1 rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm font-medium transition hover:bg-[#f4f0ea] disabled:opacity-50"
                             >
                                 İptal
                             </button>
 
                             <button
                                 type="button"
-                                onClick={handleAdd}
-                                disabled={saving}
-                                className="flex-1 rounded-xl bg-[#292622] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                                onClick={
+                                    handleAdd
+                                }
+                                disabled={
+                                    saving
+                                }
+                                className="flex-1 rounded-xl bg-[#292622] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#3a3631] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {saving
                                     ? "Ekleniyor..."
                                     : "Kategoriyi Ekle"}
                             </button>
-
                         </div>
-
                     </div>
                 </div>
             )}
 
+            {/* ================================================= */}
             {/* EDIT MODAL */}
+            {/* ================================================= */}
 
             {editingCategory && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5">
-
                     <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
+                        <div className="mb-6">
+                            <h2 className="text-xl font-semibold">
+                                Kategoriyi Düzenle
+                            </h2>
 
-                        <h2 className="text-xl font-semibold">
-                            Kategoriyi Düzenle
-                        </h2>
+                            <p className="mt-1 text-sm text-[#81766e]">
+                                Kategori bilgilerini
+                                güncelleyin.
+                            </p>
+                        </div>
 
-                        <p className="mt-1 text-sm text-[#81766e]">
-                            Kategori bilgilerini güncelleyin.
-                        </p>
-
-                        <div className="mt-6 space-y-5">
+                        <div className="space-y-5">
+                            {/* NAME */}
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium">
@@ -829,15 +1104,23 @@ export default function CategoryManager({
 
                                 <input
                                     type="text"
-                                    value={name}
-                                    onChange={(e) =>
+                                    value={
+                                        name
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
                                         setName(
-                                            e.target.value
+                                            event
+                                                .target
+                                                .value
                                         )
                                     }
-                                    className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm outline-none focus:border-[#292622]"
+                                    className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm text-[#292622] outline-none focus:border-[#292622]"
                                 />
                             </div>
+
+                            {/* SLUG */}
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium">
@@ -846,16 +1129,66 @@ export default function CategoryManager({
 
                                 <input
                                     type="text"
-                                    value={slug}
-                                    onChange={(e) =>
+                                    value={
+                                        slug
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
                                         setSlug(
                                             createSlug(
-                                                e.target.value
+                                                event
+                                                    .target
+                                                    .value
                                             )
                                         )
                                     }
-                                    className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm outline-none focus:border-[#292622]"
+                                    className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm text-[#292622] outline-none focus:border-[#292622]"
                                 />
+                            </div>
+
+                            {/* ICON */}
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium">
+                                    Kategori ikonu
+                                </label>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    {ICON_OPTIONS.map(
+                                        (
+                                            option
+                                        ) => (
+                                            <button
+                                                key={
+                                                    option.value
+                                                }
+                                                type="button"
+                                                onClick={() =>
+                                                    setIcon(
+                                                        option.value
+                                                    )
+                                                }
+                                                className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm transition ${icon ===
+                                                        option.value
+                                                        ? "border-[#292622] bg-[#f4f0ea] text-[#292622]"
+                                                        : "border-[#ddd4cb] hover:bg-[#f8f5f1]"
+                                                    }`}
+                                            >
+                                                <CategoryIcon
+                                                    icon={
+                                                        option.value
+                                                    }
+                                                    className="h-5 w-5"
+                                                />
+
+                                                {
+                                                    option.label
+                                                }
+                                            </button>
+                                        )
+                                    )}
+                                </div>
                             </div>
 
                             {error && (
@@ -863,37 +1196,40 @@ export default function CategoryManager({
                                     {error}
                                 </div>
                             )}
-
                         </div>
 
                         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-
                             <button
                                 type="button"
-                                onClick={closeEdit}
-                                disabled={saving}
-                                className="flex-1 rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm font-medium hover:bg-[#f4f0ea]"
+                                onClick={
+                                    closeEdit
+                                }
+                                disabled={
+                                    saving
+                                }
+                                className="flex-1 rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm font-medium transition hover:bg-[#f4f0ea] disabled:opacity-50"
                             >
                                 İptal
                             </button>
 
                             <button
                                 type="button"
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="flex-1 rounded-xl bg-[#292622] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                                onClick={
+                                    handleSave
+                                }
+                                disabled={
+                                    saving
+                                }
+                                className="flex-1 rounded-xl bg-[#292622] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#3a3631] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {saving
                                     ? "Kaydediliyor..."
                                     : "Kaydet"}
                             </button>
-
                         </div>
-
                     </div>
                 </div>
             )}
-
         </>
     );
 }
