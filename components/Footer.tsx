@@ -8,7 +8,7 @@ export default function Footer() {
             </p>
 
             <p className="mt-2 text-xs text-[#b0a49b]">
-                Butik Cafe
+                Kozalak Cafe
             </p>
         </footer>
     );

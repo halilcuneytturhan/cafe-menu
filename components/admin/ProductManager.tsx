@@ -3,7 +3,6 @@
 import {
     DndContext,
     DragEndEvent,
-    DragOverEvent,
     PointerSensor,
     closestCorners,
     useDroppable,
@@ -20,7 +19,7 @@ import {
 
 import { CSS } from "@dnd-kit/utilities";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Product {
@@ -192,8 +191,8 @@ function CategoryDropZone({
         <div
             ref={setNodeRef}
             className={`min-h-[60px] transition ${isOver
-                    ? "bg-[#f4f0ea]"
-                    : ""
+                ? "bg-[#f4f0ea]"
+                : ""
                 }`}
         >
             {children}
@@ -205,6 +204,8 @@ export default function ProductManager({
     initialProducts,
     categories,
 }: ProductManagerProps) {
+
+    const dndContextId = useId();
 
     const [products, setProducts] =
         useState<Product[]>(
@@ -335,227 +336,217 @@ export default function ProductManager({
         return product?.category_id;
     }
 
-    // =========================
-    // DRAG OVER
-    // =========================
-
-    function handleDragOver(
-        event: DragOverEvent
-    ) {
-        const {
-            active,
-            over,
-        } = event;
-
-        if (!over) return;
-
-        const activeId =
-            Number(active.id);
-
-        const activeProduct =
-            findProduct(activeId);
-
-        if (!activeProduct) return;
-
-        const targetCategoryId =
-            getCategoryIdFromDrop(
-                over.id
-            );
-
-        if (
-            !targetCategoryId ||
-            activeProduct.category_id ===
-            targetCategoryId
-        ) {
-            return;
-        }
-
-        setProducts(
-            (currentProducts) =>
-                currentProducts.map(
-                    (product) =>
-                        product.id ===
-                            activeProduct.id
-                            ? {
-                                ...product,
-                                category_id:
-                                    targetCategoryId,
-                            }
-                            : product
-                )
-        );
-    }
 
     // =========================
     // DRAG END
     // =========================
 
-    async function handleDragEnd(
-        event: DragEndEvent
-    ) {
-        const {
-            active,
-            over,
-        } = event;
+    async function handleDragEnd(event: DragEndEvent) {
+        const { active, over } = event;
 
         if (!over) return;
 
-        const activeId =
-            Number(active.id);
+        const activeId = Number(active.id);
 
-        const activeProduct =
-            findProduct(activeId);
+        const activeProduct = products.find(
+            (product) => product.id === activeId
+        );
 
         if (!activeProduct) return;
 
+        const sourceCategoryId =
+            activeProduct.category_id;
+
         const targetCategoryId =
-            getCategoryIdFromDrop(
-                over.id
-            );
+            getCategoryIdFromDrop(over.id);
 
-        if (!targetCategoryId) {
-            return;
-        }
+        if (!targetCategoryId) return;
 
-        const categoryProducts =
-            getCategoryProducts(
-                targetCategoryId
-            );
+        let workingProducts = [...products];
 
-        let reorderedProducts =
-            [...categoryProducts];
-
-        const oldIndex =
-            reorderedProducts.findIndex(
-                (product) =>
-                    product.id ===
-                    activeId
-            );
-
-        let newIndex =
-            reorderedProducts.findIndex(
-                (product) =>
-                    product.id ===
-                    Number(over.id)
-            );
+        // =====================================
+        // AYNI KATEGORİ İÇİNDE SIRALAMA
+        // =====================================
 
         if (
-            typeof over.id === "string" &&
-            over.id.startsWith(
-                "category-"
-            )
+            sourceCategoryId ===
+            targetCategoryId
         ) {
-            newIndex =
-                reorderedProducts.length;
-        }
+            const categoryProducts =
+                workingProducts
+                    .filter(
+                        (product) =>
+                            product.category_id ===
+                            sourceCategoryId
+                    )
+                    .sort(
+                        (a, b) =>
+                            (a.sort_order ?? 0) -
+                            (b.sort_order ?? 0)
+                    );
 
-        if (
-            oldIndex !== -1 &&
-            newIndex !== -1 &&
-            oldIndex !== newIndex
-        ) {
-            reorderedProducts =
+            const oldIndex =
+                categoryProducts.findIndex(
+                    (product) =>
+                        product.id === activeId
+                );
+
+            let newIndex: number;
+
+            if (
+                typeof over.id === "string" &&
+                over.id.startsWith("category-")
+            ) {
+                newIndex =
+                    categoryProducts.length - 1;
+            } else {
+                newIndex =
+                    categoryProducts.findIndex(
+                        (product) =>
+                            product.id ===
+                            Number(over.id)
+                    );
+            }
+
+            if (
+                oldIndex === -1 ||
+                newIndex === -1
+            ) {
+                return;
+            }
+
+            if (oldIndex === newIndex) {
+                return;
+            }
+
+            const reordered =
                 arrayMove(
-                    reorderedProducts,
+                    categoryProducts,
                     oldIndex,
                     newIndex
+                ).map(
+                    (product, index) => ({
+                        ...product,
+                        sort_order: index + 1,
+                    })
                 );
-        }
 
-        if (oldIndex === -1) {
-            const withoutActive =
-                reorderedProducts.filter(
+            workingProducts = [
+                ...workingProducts.filter(
                     (product) =>
-                        product.id !==
-                        activeId
-                );
-
-            const movedProduct =
-                findProduct(activeId);
-
-            if (movedProduct) {
-                let insertIndex =
-                    withoutActive.length;
-
-                if (
-                    typeof over.id ===
-                    "number" ||
-                    (
-                        typeof over.id ===
-                        "string" &&
-                        !over.id.startsWith(
-                            "category-"
-                        )
-                    )
-                ) {
-                    const targetIndex =
-                        withoutActive.findIndex(
-                            (product) =>
-                                product.id ===
-                                Number(
-                                    over.id
-                                )
-                        );
-
-                    if (
-                        targetIndex !==
-                        -1
-                    ) {
-                        insertIndex =
-                            targetIndex;
-                    }
-                }
-
-                withoutActive.splice(
-                    insertIndex,
-                    0,
-                    {
-                        ...movedProduct,
-                        category_id:
-                            targetCategoryId,
-                    }
-                );
-
-                reorderedProducts =
-                    withoutActive;
-            }
+                        product.category_id !==
+                        sourceCategoryId
+                ),
+                ...reordered,
+            ];
         }
 
-        // =========================
-        // BUILD FINAL PRODUCTS
-        // =========================
+        // =====================================
+        // BAŞKA KATEGORİYE TAŞIMA
+        // =====================================
 
-        const allCategoryProducts =
-            products.filter(
-                (product) =>
-                    product.category_id !==
-                    targetCategoryId
-            );
+        else {
+            const sourceProducts =
+                workingProducts
+                    .filter(
+                        (product) =>
+                            product.category_id ===
+                            sourceCategoryId &&
+                            product.id !== activeId
+                    )
+                    .sort(
+                        (a, b) =>
+                            (a.sort_order ?? 0) -
+                            (b.sort_order ?? 0)
+                    );
 
-        const finalTargetProducts =
-            reorderedProducts.map(
-                (
-                    product,
-                    index
-                ) => ({
-                    ...product,
+            const targetProducts =
+                workingProducts
+                    .filter(
+                        (product) =>
+                            product.category_id ===
+                            targetCategoryId &&
+                            product.id !== activeId
+                    )
+                    .sort(
+                        (a, b) =>
+                            (a.sort_order ?? 0) -
+                            (b.sort_order ?? 0)
+                    );
+
+            let insertIndex =
+                targetProducts.length;
+
+            if (
+                !(
+                    typeof over.id === "string" &&
+                    over.id.startsWith(
+                        "category-"
+                    )
+                )
+            ) {
+                const targetIndex =
+                    targetProducts.findIndex(
+                        (product) =>
+                            product.id ===
+                            Number(over.id)
+                    );
+
+                if (targetIndex !== -1) {
+                    insertIndex = targetIndex;
+                }
+            }
+
+            targetProducts.splice(
+                insertIndex,
+                0,
+                {
+                    ...activeProduct,
                     category_id:
                         targetCategoryId,
-                    sort_order:
-                        index + 1,
-                })
+                }
             );
 
-        const finalProducts = [
-            ...allCategoryProducts,
-            ...finalTargetProducts,
-        ];
+            const normalizedSource =
+                sourceProducts.map(
+                    (product, index) => ({
+                        ...product,
+                        sort_order: index + 1,
+                    })
+                );
 
-        // Rebuild order for every category
+            const normalizedTarget =
+                targetProducts.map(
+                    (product, index) => ({
+                        ...product,
+                        category_id:
+                            targetCategoryId,
+                        sort_order: index + 1,
+                    })
+                );
+
+            workingProducts = [
+                ...workingProducts.filter(
+                    (product) =>
+                        product.category_id !==
+                        sourceCategoryId &&
+                        product.category_id !==
+                        targetCategoryId &&
+                        product.id !== activeId
+                ),
+                ...normalizedSource,
+                ...normalizedTarget,
+            ];
+        }
+
+        // =====================================
+        // TÜM SIRALARI NORMALIZE ET
+        // =====================================
+
         const normalizedProducts =
             categories.flatMap(
                 (category) =>
-                    finalProducts
+                    workingProducts
                         .filter(
                             (product) =>
                                 product.category_id ===
@@ -563,16 +554,11 @@ export default function ProductManager({
                         )
                         .sort(
                             (a, b) =>
-                                (a.sort_order ??
-                                    0) -
-                                (b.sort_order ??
-                                    0)
+                                (a.sort_order ?? 0) -
+                                (b.sort_order ?? 0)
                         )
                         .map(
-                            (
-                                product,
-                                index
-                            ) => ({
+                            (product, index) => ({
                                 ...product,
                                 sort_order:
                                     index + 1,
@@ -580,13 +566,12 @@ export default function ProductManager({
                         )
             );
 
-        setProducts(
-            normalizedProducts
-        );
+        // UI tek sefer güncellensin
+        setProducts(normalizedProducts);
 
-        // =========================
-        // SAVE DATABASE
-        // =========================
+        // =====================================
+        // DATABASE
+        // =====================================
 
         setSaving(true);
         setError("");
@@ -612,9 +597,7 @@ export default function ProductManager({
             );
 
         const results =
-            await Promise.all(
-                updates
-            );
+            await Promise.all(updates);
 
         const failed =
             results.find(
@@ -1027,13 +1010,13 @@ export default function ProductManager({
                 {/* ========================= */}
 
                 <DndContext
+                    id={dndContextId}
+
                     sensors={sensors}
                     collisionDetection={
                         closestCorners
                     }
-                    onDragOver={
-                        handleDragOver
-                    }
+
                     onDragEnd={
                         handleDragEnd
                     }
@@ -1073,8 +1056,8 @@ export default function ProductManager({
 
                                                     <span
                                                         className={`rounded-full px-2.5 py-1 text-xs ${category.is_active
-                                                                ? "bg-green-50 text-green-700"
-                                                                : "bg-gray-100 text-gray-500"
+                                                            ? "bg-green-50 text-green-700"
+                                                            : "bg-gray-100 text-gray-500"
                                                             }`}
                                                     >
                                                         {category.is_active

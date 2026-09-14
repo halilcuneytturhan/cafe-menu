@@ -17,13 +17,35 @@ export default function AdminLoginPage() {
 
         const supabase = createClient();
 
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        const { error: loginError } =
+            await supabase.auth.signInWithPassword({
+                email: email.trim().toLowerCase(),
+                password,
+            });
 
-        if (error) {
+        if (loginError) {
             setError("E-posta veya şifre hatalı.");
+            setLoading(false);
+            return;
+        }
+
+        const verifyResponse = await fetch(
+            "/api/admin/verify",
+            {
+                method: "POST",
+                cache: "no-store",
+            }
+        );
+
+        if (!verifyResponse.ok) {
+            await supabase.auth.signOut();
+
+            setError(
+                verifyResponse.status === 403
+                    ? "Bu hesap yönetim paneline yetkili değil."
+                    : "Yönetici yetkisi doğrulanamadı."
+            );
+
             setLoading(false);
             return;
         }
@@ -36,11 +58,11 @@ export default function AdminLoginPage() {
             <div className="w-full max-w-md rounded-3xl border border-[#e3dbd2] bg-white p-8 shadow-sm">
                 <div className="mb-8 text-center">
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#292622] text-lg font-semibold text-white">
-                        B
+                        K
                     </div>
 
                     <h1 className="text-2xl font-semibold text-[#292622]">
-                        Butik Cafe
+                        Kozalak Cafe
                     </h1>
 
                     <p className="mt-2 text-sm text-[#81766e]">
@@ -60,6 +82,7 @@ export default function AdminLoginPage() {
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="E-posta adresiniz"
                             required
+                            autoComplete="email"
                             className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm text-[#292622] placeholder:text-[#81766e] outline-none transition focus:border-[#292622]"
                         />
                     </div>
@@ -75,6 +98,7 @@ export default function AdminLoginPage() {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Şifreniz"
                             required
+                            autoComplete="current-password"
                             className="w-full rounded-xl border border-[#ddd4cb] px-4 py-3 text-sm text-[#292622] placeholder:text-[#81766e] outline-none transition focus:border-[#292622]"
                         />
                     </div>

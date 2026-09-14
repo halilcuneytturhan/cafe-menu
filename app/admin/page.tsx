@@ -14,6 +14,18 @@ export default async function AdminPage() {
         redirect("/admin/login");
     }
 
+    const adminUserId = process.env.ADMIN_USER_ID;
+
+    if (!adminUserId) {
+        throw new Error(
+            "ADMIN_USER_ID environment variable is not configured."
+        );
+    }
+
+    if (user.id !== adminUserId) {
+        redirect("/admin/login?unauthorized=1");
+    }
+
     // =========================
     // COUNTS
     // =========================
@@ -86,7 +98,7 @@ export default async function AdminPage() {
 
                     <div>
                         <p className="text-lg font-semibold">
-                            Butik Cafe
+                            Kozalak Cafe
                         </p>
 
                         <p className="text-xs text-[#81766e]">

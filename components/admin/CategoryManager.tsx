@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
+import { useRouter } from "next/navigation";
 interface Category {
     id: number;
     name: string;
@@ -251,6 +251,7 @@ function CategoryIcon({
 export default function CategoryManager({
     initialCategories,
 }: CategoryManagerProps) {
+    const router = useRouter();
     const [categories, setCategories] =
         useState<Category[]>(initialCategories);
 
@@ -374,6 +375,7 @@ export default function CategoryManager({
         setIcon("coffee");
         setSaving(false);
         setAdding(false);
+        router.refresh();
     }
 
     // =====================================================
@@ -456,6 +458,7 @@ export default function CategoryManager({
 
         setSaving(false);
         setEditingCategory(null);
+        router.refresh();
     }
 
     // =====================================================
@@ -500,8 +503,9 @@ export default function CategoryManager({
                     : currentCategory
             )
         );
-
         setSaving(false);
+        router.refresh();
+
     }
 
     // =====================================================
@@ -576,6 +580,8 @@ export default function CategoryManager({
         await Promise.all(updates);
 
         setSaving(false);
+        router.refresh();
+
     }
 
     // =====================================================
@@ -701,6 +707,8 @@ export default function CategoryManager({
         }
 
         setSaving(false);
+        router.refresh();
+
     }
 
     return (
@@ -827,8 +835,8 @@ export default function CategoryManager({
 
                                                 <span
                                                     className={`rounded-full px-2.5 py-1 text-xs ${category.is_active
-                                                            ? "bg-green-50 text-green-600"
-                                                            : "bg-gray-100 text-gray-500"
+                                                        ? "bg-green-50 text-green-600"
+                                                        : "bg-gray-100 text-gray-500"
                                                         }`}
                                                 >
                                                     {category.is_active
@@ -1015,9 +1023,9 @@ export default function CategoryManager({
                                                     )
                                                 }
                                                 className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm transition ${icon ===
-                                                        option.value
-                                                        ? "border-[#292622] bg-[#f4f0ea] text-[#292622]"
-                                                        : "border-[#ddd4cb] hover:bg-[#f8f5f1]"
+                                                    option.value
+                                                    ? "border-[#292622] bg-[#f4f0ea] text-[#292622]"
+                                                    : "border-[#ddd4cb] hover:bg-[#f8f5f1]"
                                                     }`}
                                             >
                                                 <CategoryIcon
@@ -1170,9 +1178,9 @@ export default function CategoryManager({
                                                     )
                                                 }
                                                 className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm transition ${icon ===
-                                                        option.value
-                                                        ? "border-[#292622] bg-[#f4f0ea] text-[#292622]"
-                                                        : "border-[#ddd4cb] hover:bg-[#f8f5f1]"
+                                                    option.value
+                                                    ? "border-[#292622] bg-[#f4f0ea] text-[#292622]"
+                                                    : "border-[#ddd4cb] hover:bg-[#f8f5f1]"
                                                     }`}
                                             >
                                                 <CategoryIcon
